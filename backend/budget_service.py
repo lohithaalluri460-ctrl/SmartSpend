@@ -24,8 +24,37 @@ def set_budget(user_id, month, year, amount):
     if year < 2000:
         return False, "Invalid year"
 
-    # Keep your existing database code below this line.
+    connection = get_connection()
+    cursor = connection.cursor()
 
+    try:
+        cursor.execute("""
+            SELECT budget_id FROM budgets
+            WHERE user_id = ? AND month = ? AND year = ?
+        """, (user_id, month, year))
+
+        existing_budget = cursor.fetchone()
+
+        if existing_budget:
+            cursor.execute("""
+                UPDATE budgets SET amount = ?
+                WHERE budget_id = ?
+            """, (amount, existing_budget[0]))
+        else:
+            cursor.execute("""
+                INSERT INTO budgets (user_id, month, year, amount)
+                VALUES (?, ?, ?, ?)
+            """, (user_id, month, year, amount))
+
+        connection.commit()
+        return True, "Budget saved successfully!"
+
+    except Exception as e:
+        connection.rollback()
+        return False, str(e)
+
+    finally:
+        connection.close()
 
 
 def get_monthly_budget(user_id, month, year):
